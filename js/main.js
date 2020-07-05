@@ -1,7 +1,7 @@
 var main = (function(){
 	var init = function(){		
 		setUpListeners();
-		setValueInputs();
+		setValueInputsAndSelects();
 	};
 
 	//----------------------- setUpListeners------------------------------------------------------------------
@@ -9,16 +9,15 @@ var main = (function(){
 		$("#mainForm").submit(function(e){
 			e.preventDefault();			
 			_serializeForm();
-		});
-		$('#mainForm input').on('blur', _saveValue);
-		$('#mainForm select').on('change', _saveValueSelect);
+		});			
+		$('#mainForm input,select').on('change', _saveValueInputsAndSelects);
 		$('.btn-show-itemCount').on('click', _slideCountItem);
 	};
 
 	var _serializeForm = function() {
-		const $data = {};	
+		/* const $data = {};	
 		let countLayer, 
-		countBoxes = 0;
+		countBoxes = 0; */
 		let arrayParties = [];
 				
 		$('#mainForm').find ('.item-count__content').each(function() {						
@@ -36,16 +35,33 @@ var main = (function(){
 		}		
 	}
 
-	var _saveValue = function(e) {
-		var name = e.target.name;
-		var val = e.target.value;		
-		localStorage.setItem(name, val);
-	}
+	var _saveValueInputsAndSelects = function () {		
+		let arrayItems = [];
+		let resultArray = [];
+						
+		$('#mainForm').find('.item-count__content').each(function() {						
+			if(!$(this).hasClass('hide')) {
+				arrayItems.push($(this));
+			} 				
+		});	
 
-	var _saveValueSelect = function(e) {
-		var name = e.target.name;
-		var val = e.target.value;		
-		localStorage.setItem(name, val);
+		for(let i = 0; i < arrayItems.length; i++) {
+			let objectInputs = {};
+			let inputs = arrayItems[i].find('input');
+			for(let i = 0; i < inputs.length; i++) {
+				objectInputs[`${inputs[i].name}`] = inputs[i].value;
+			}
+			let objectSelects = {};			
+			let selects = arrayItems[i].find('select');
+			for(let i = 0; i < selects.length; i++) {
+				objectSelects[`${selects[i].name}`] = selects[i].value;
+			}
+			let resultObject = {};
+			resultObject.inputs = objectInputs;
+			resultObject.selects = objectSelects;
+			resultArray[i] = resultObject;
+		}
+		localStorage.setItem("ItemsCount", JSON.stringify(resultArray));		
 	}
 
 	var _slideCountItem = function() {
@@ -59,8 +75,35 @@ var main = (function(){
 
 	// End -------------------- setUpListeners------------------------------------------------------------------
 
-	// -------------------------setValueInputs------------------------------------------------------------------
-	var setValueInputs = function() {
+	// -------------------------setValueInputsAndSelects------------------------------------------------------------------
+	var setValueInputsAndSelects = function() {
+		let arrayItems = [];		
+						
+		$('#mainForm').find('.item-count__content').each(function() {		
+			arrayItems.push($(this));						
+		});	
+
+		let localData = localStorage.getItem("ItemsCount");
+		itemsCount = JSON.parse(localData);
+		for(let i = 0; i < itemsCount.length; i++) {
+		
+			let inputs = itemsCount[i].inputs;
+		/* 	for (key in inputs) {
+				console.log(key);
+				console.log(arrayItems[i]);
+				let selectInputs = arrayItems[i].find("input[name=" + key + "]").eq(0);
+				selectInputs.val(inputs[key]);			
+			} */
+			_setValue(inputs, arrayItems[i], "input");
+
+			let selects = itemsCount[i].selects;
+			_setValue(selects, arrayItems[i], "select");		
+
+		}	
+	}
+
+/* 	
+	var setValueInputsAndSelects = function() {
 		var inputs = $('#mainForm').find ('input');		
 		inputs.each(function() {			
 			$(this).val(_getSavedValue($(this).attr( "name" )));
@@ -69,6 +112,13 @@ var main = (function(){
 		selects.each(function() {
 			$(this).val(_getSavedValue($(this).attr("name")));
 		})
+	} */
+
+	var _setValue = function (items, curElem, nameElem) {		
+		for (key in items) {			
+			let selectItem = curElem.find(nameElem + "[name=" + key + "]").eq(0);
+			selectItem.val(items[key]);			
+		}
 	}
 
 	var _getSavedValue = function(v) {
@@ -78,7 +128,13 @@ var main = (function(){
 		return localStorage.getItem(v);
 	}	
 
-	// End -------------------------setValueInputs------------------------------------------------------------------
+	var _saveValue = function(e) {
+		var name = e.target.name;
+		var val = e.target.value;		
+		localStorage.setItem(name, val);
+	}
+
+	// End -------------------------setValueInputsAndSelects------------------------------------------------------------------
 
 	// -----------------------------countOneParties-----------------------------------------------------------------
 

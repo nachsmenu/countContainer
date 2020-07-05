@@ -40,36 +40,49 @@ var main = (function(){
 		let resultArray = [];
 						
 		$('#mainForm').find('.item-count__content').each(function() {						
-			if(!$(this).hasClass('hide')) {
+		/* 	if(!$(this).hasClass('hide')) {
 				arrayItems.push($(this));
-			} 				
+			}  */
+			arrayItems.push($(this));				
 		});	
 
 		for(let i = 0; i < arrayItems.length; i++) {
+			let resultObject = {};
 			let objectInputs = {};
+			let objectSelects = {};	
+
+			if(arrayItems[i].hasClass('hide')) {						
+				resultObject['hide'] = true;
+			} else {
+				resultObject['hide'] = false;
+			}
+
 			let inputs = arrayItems[i].find('input');
 			for(let i = 0; i < inputs.length; i++) {
 				objectInputs[`${inputs[i].name}`] = inputs[i].value;
 			}
-			let objectSelects = {};			
+				
 			let selects = arrayItems[i].find('select');
 			for(let i = 0; i < selects.length; i++) {
 				objectSelects[`${selects[i].name}`] = selects[i].value;
-			}
-			let resultObject = {};
+			}			
 			resultObject.inputs = objectInputs;
-			resultObject.selects = objectSelects;
+			resultObject.selects = objectSelects;			
 			resultArray[i] = resultObject;
 		}
 		localStorage.setItem("ItemsCount", JSON.stringify(resultArray));		
 	}
 
-	var _slideCountItem = function() {
-		$(this).next().toggleClass("hide");
+	var _slideCountItem = function() {		
 		if($(this).text() == "Добавить позицию") {
 			$(this).text("Удалить позицию");
+			$(this).next().removeClass("hide");	
+			_saveValueInputsAndSelects();				
 		} else {
-			$(this).text("Добавить позицию");
+			$(this).text("Добавить позицию");	
+			$(this).next().addClass("hide");
+			_saveValueInputsAndSelects();
+						
 		}
 	}
 
@@ -85,15 +98,16 @@ var main = (function(){
 
 		let localData = localStorage.getItem("ItemsCount");
 		itemsCount = JSON.parse(localData);
-		for(let i = 0; i < itemsCount.length; i++) {
-		
-			let inputs = itemsCount[i].inputs;
-		/* 	for (key in inputs) {
-				console.log(key);
-				console.log(arrayItems[i]);
-				let selectInputs = arrayItems[i].find("input[name=" + key + "]").eq(0);
-				selectInputs.val(inputs[key]);			
-			} */
+		for(let i = 0; i < itemsCount.length; i++) {			
+			if(itemsCount[i].hide) {
+				if(!arrayItems[i].hasClass('hide')) {
+					arrayItems[i].addClass('hide');	
+				}							
+			} else {
+				arrayItems[i].removeClass('hide');	
+			} 
+
+			let inputs = itemsCount[i].inputs;		
 			_setValue(inputs, arrayItems[i], "input");
 
 			let selects = itemsCount[i].selects;

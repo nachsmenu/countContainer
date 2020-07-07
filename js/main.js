@@ -6,8 +6,8 @@ var main = (function(){
 
 	//----------------------- setUpListeners------------------------------------------------------------------
 	var setUpListeners = function() {			
-		$("#mainForm").submit(function(e){
-			e.preventDefault();			
+		$("#countForm").click(function(e){
+			//e.preventDefault();			
 			_serializeForm();
 		});			
 		$('#mainForm input,select').on('change', _saveValueInputsAndSelects);
@@ -98,13 +98,17 @@ var main = (function(){
 
 		let localData = localStorage.getItem("ItemsCount");
 		itemsCount = JSON.parse(localData);
+		if(!itemsCount) {
+			return false;
+		}
 		for(let i = 0; i < itemsCount.length; i++) {			
 			if(itemsCount[i].hide) {
 				if(!arrayItems[i].hasClass('hide')) {
 					arrayItems[i].addClass('hide');	
 				}							
 			} else {
-				arrayItems[i].removeClass('hide');	
+				arrayItems[i].removeClass('hide');
+				arrayItems[i].prev().text('Удалить позицию');	
 			} 
 
 			let inputs = itemsCount[i].inputs;		
@@ -156,9 +160,14 @@ var main = (function(){
 		let dataParties = {};
 		dataParties = _serializeFormOneParties($elem, $cont);
 		console.log(dataParties);  
-
+		if(!dataParties) {
+			return false;
+		}
 		let countBoxes = dataParties["countBottle"]/dataParties["typeBox"]["countBottlesInBox"];
+		let sOneBox = parseFloat(((dataParties["typeBox"]["length"]/1000)*(dataParties["typeBox"]["width"]/1000)*(dataParties["typeBox"]["height"]/1000)).toFixed(2));
+		let sParties =	sOneBox * countBoxes;		
 		let countLeyer = _countLayer(dataParties["countBoxesInRow"], dataParties["containerLength"], dataParties["typeBox"]["length"], countBoxes, 32, 0.7);
+		countLeyer.sParties = sParties;
 		console.log(countLeyer);
 
 		_showViewParties(countLeyer);
@@ -175,9 +184,14 @@ var main = (function(){
 		for(let i = 0; i < $elements.length; i++) {
 			arrayParties[i] = {};
 			arrayParties[i].data = _serializeFormOneParties($elements[i], $cont);
-			let partiesData = arrayParties[i].data;
-			arrayParties[i].countBoxes = partiesData["countBottle"]/partiesData["typeBox"]["countBottlesInBox"];
-			arrayParties[i].countParties = _countSParties(arrayParties[i].data, arrayParties[i].countBoxes);
+			if(arrayParties[i].data) {
+				let partiesData = arrayParties[i].data;
+				arrayParties[i].countBoxes = partiesData["countBottle"]/partiesData["typeBox"]["countBottlesInBox"];
+				arrayParties[i].countParties = _countSParties(arrayParties[i].data, arrayParties[i].countBoxes);
+			} else {
+				return false;
+			}
+			
 		}
 
 		let partiesProportion = _countPartiesProportion(arrayParties, arrayParties[0].data["containerWidth"], arrayParties[0].data["containerLength"]);
@@ -185,11 +199,10 @@ var main = (function(){
 		for(let i = 0; i < partiesProportion.length; i++) {
 			arrayParties[i].data.containerLength = partiesProportion[i];
 		}
-
-		console.log(arrayParties);
+		
 		for(let i = 0; i < arrayParties.length; i++) {
 			let curData = arrayParties[i].data;
-			arrayParties[i].countLeyer = _countLayer(curData["countBoxesInRow"], curData["containerLength"], curData["typeBox"]["length"], arrayParties[i].countBoxes, 40, 0.1);
+			arrayParties[i].countLeyer = _countLayer(curData["countBoxesInRow"], curData["containerLength"], curData["typeBox"]["length"], arrayParties[i].countBoxes, 31, 0.1);
 		}
 		console.log(arrayParties);
 		_showViewAllParties(arrayParties);
@@ -218,13 +231,34 @@ var main = (function(){
 			}			
 		});	
 		console.log($data);
-		return $data;  
+		let isValidForm = true;
+		for (key in $data) {
+			if($data[key] == 0) {
+				isValidForm = false;
+			}
+		}
+		if(isValidForm) {
+			return $data; 
+		} else {
+			console.log('valid');
+			_showError();
+			return false;
+			
+		}		 
 			
 		/* for (const property in $data) { */
 		/* 	console.log(`${property}: ${$data[property]}`); */
 		/* } */
 	
-	}		
+	}	
+	
+	// _showError()
+	var _showError = function () {		
+		$resultsBox = $('#results-count');
+		$resultsBox.empty();
+		$resultsError = $('<p>').addClass('text-result text-allert').text('Вы заполнили не все поля!!!');
+		$resultsBox.append($resultsError);
+	}
 
 	// _getValueInputs
 	var _getValueInputs = function (elem , data) {		
@@ -293,16 +327,15 @@ var main = (function(){
 		let result = {};
 
 		// count leyer length
-		boxLength = boxLength/10;			
-		let remainder = parseFloat((contLength%boxLength).toFixed(2));
-	
+		boxLength = boxLength/10;		
+		let remainder = parseFloat((contLength%boxLength).toFixed(2));		
 		if(boxLength < minBoxLength) {
 			if(remainder < boxLength) {
 				remainder = remainder + boxLength;
 			}
 		} else {
 			if(remainder < (boxLength * procentBoxLength)) {
-				remainder = remainder + boxLength;
+				remainder = parseFloat((remainder + boxLength).toFixed(2));				
 			}
 		}
 	
@@ -357,9 +390,11 @@ var main = (function(){
 		$resultsCountRow = $('<p>').addClass('text-result').text('Количество рядов : ' + countLeyer.leyerLength);
 		$resultsCountAddBox = $('<p>').addClass('text-result').text('Количество ящиков которые необходимо добавить : ' + countLeyer.addBoxes);
 		$resultsCountLengthRemainder = $('<p>').addClass('text-result').text('Растояние от последнего ряда ящиков до конца контейнера : ' + countLeyer.contLengthRemainder + ' см.');
+		$resultSParties = $('<p>').addClass('text-result').text('Обьем партии : ' + countLeyer.sParties + ' м3');
 		$resultsBox.append($resultsCountRow)
 						.append($resultsCountAddBox)
-							.append($resultsCountLengthRemainder);
+							.append($resultsCountLengthRemainder)
+								.append($resultSParties);
 	}	
 
 
@@ -376,9 +411,11 @@ var main = (function(){
 			$resultsCountRow = $('<p>').addClass('text-result').text('Количество рядов : ' + arrayParties[i].countLeyer.leyerLength);
 			$resultsCountAddBox = $('<p>').addClass('text-result').text('Количество ящиков которые необходимо добавить : ' + arrayParties[i].countLeyer.addBoxes);
 			$resultsCountLengthRemainder = $('<p>').addClass('text-result').text('Растояние от последнего ряда ящиков до конца контейнера : ' + arrayParties[i].countLeyer.contLengthRemainder + ' см.');
+			$resultSParties = $('<p>').addClass('text-result').text('Обьем партии : ' + arrayParties[i].countParties + ' м3');
 			$resultsBox.append($resultsCountRow)
 						.append($resultsCountAddBox)
-							.append($resultsCountLengthRemainder);
+							.append($resultsCountLengthRemainder)
+							.append($resultSParties);
 			
 		}
 	}
